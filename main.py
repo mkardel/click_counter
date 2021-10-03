@@ -14,14 +14,22 @@ if typing.TYPE_CHECKING:
     from typing import Type
 
 
+MouseButtons = {
+    Qt.LeftButton: "Left",
+    Qt.RightButton: "Right",
+    Qt.MiddleButton: "Middle",
+    Qt.XButton1: "Mouse4",
+    Qt.XButton2: "Mouse5"
+}
+
+
 class ClickCounter(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         click_me_button = QPushButton("Click here")
         click_me_button.installEventFilter(self)
 
-        self.left_click_counter = 0
-        self.right_click_counter = 0
+        self.click_counter = {}
 
         reset_button = QPushButton("Reset")
         reset_button.clicked.connect(self.reset)
@@ -29,12 +37,10 @@ class ClickCounter(QWidget):
         counter_widget_box = QWidget(self)
         counter_layout = QHBoxLayout(counter_widget_box)
 
-        self.left_click_label = QLabel(counter_widget_box)
-        self.right_click_label = QLabel(counter_widget_box)
-        counter_layout.addWidget(self.left_click_label)
-        counter_layout.addWidget(self.right_click_label)
-        self.update_left()
-        self.update_right()
+        self.click_labels = {}
+        for button_id, _ in MouseButtons.items():
+            self.click_labels[button_id] = QLabel(counter_widget_box)
+            counter_layout.addWidget(self.click_labels[button_id])
 
         layout = QVBoxLayout()
         layout.addWidget(click_me_button)
@@ -43,30 +49,21 @@ class ClickCounter(QWidget):
 
         self.setWindowTitle("Click Counter")
         self.setLayout(layout)
+        self.reset()
 
-    def update_left(self):
-        self.left_click_label.setText("Left: {}".format(self.left_click_counter))
-
-    def update_right(self):
-        self.right_click_label.setText("Right: {}".format(self.right_click_counter))
-
-    def update_all(self):
-        self.update_right()
-        self.update_left()
+    def update(self):
+        for button_id, qlabel in self.click_labels.items():
+            qlabel.setText(f"{MouseButtons[button_id]}: {self.click_counter[button_id]}")
 
     def reset(self):
-        self.left_click_counter = 0
-        self.right_click_counter = 0
-        self.update_all()
+        for click_id, label in MouseButtons.items():
+            self.click_counter[click_id] = 0
+        self.update()
 
     def eventFilter(self, obj: 'QObject', event: 'Type[QEvent]') -> bool:
-        if event.type() == QEvent.MouseButtonRelease:
-            if event.button() == Qt.LeftButton:
-                self.left_click_counter += 1
-                self.update_left()
-            elif event.button() == Qt.RightButton:
-                self.right_click_counter += 1
-                self.update_right()
+        if event.type() == QEvent.MouseButtonRelease and event.button() in MouseButtons.keys():
+            self.click_counter[event.button()] += 1
+            self.update()
         return False
 
 
